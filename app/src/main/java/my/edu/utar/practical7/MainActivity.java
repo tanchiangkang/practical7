@@ -12,11 +12,15 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -27,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final Handler mHandler = new Handler();
+        final Handler handler = new Handler();
 
         TextView tv1 = new TextView(this);
         tv1.setText("Name:");
@@ -47,34 +51,48 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 MyThread connectThread = new MyThread(
-                        et1.getText().toString(), mHandler);
+                        et1.getText().toString(), handler);
                 connectThread.start();
             }
         });
     }
 
     private class MyThread extends Thread {
-        private String name;
+        private String mName;
         private Handler mHandler;
 
         public MyThread(String name, Handler handler) {
-            this.name = name;
+            this.mName = name;
             mHandler = handler;
         }
 
         public void run() {
             try {
-                //Q3 Access to Supabase using HTTP GET
-                URL url = new URL("https://fhehrdzrnflooriioogj.supabase.co/rest/v1/Students"
-                + "?name=eq." + name);
+                //Q4
+                //For HTTP POST
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("name", mName);
+                URL url = new URL("https://fhehrdzrnflooriioogj.supabase.co/rest/v1/Students");
 
                 Log.i("Net", url.toString());
 
                 HttpURLConnection hc =
                         (HttpURLConnection) url.openConnection();
 
+                //For Q3 & Q4
                 hc.setRequestProperty("apikey", getString(R.string.SUPABASE_KEY));
                 hc.setRequestProperty("Authorization", "Bearer " + getString(R.string.SUPABASE_KEY));
+
+                //Q4 To set request method and some additional properties
+                hc.setRequestMethod("POST");
+                hc.setRequestProperty("Content-Type", "application/json");
+                hc.setRequestProperty("Prefer", "return=minimal");
+
+                //For HTTP POST
+                hc.setDoOutput(true);
+                OutputStream output = hc.getOutputStream();
+                output.write(jsonObject.toString().getBytes());
+                output.flush();
 
                 InputStream input = hc.getInputStream();
 
@@ -87,11 +105,22 @@ public class MainActivity extends AppCompatActivity {
                     i.putExtra("output", result);
                     Log.i("MainActivity", "output = " + result);
                     startActivity(i);
+                } else if (hc.getResponseCode() == 201) {
+                    //New resource is created
+                    Log.i("MainActivity2", "Name successfully inserted");
+
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "Name successfully inserted", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 } else {
                     Log.i("MainActivity", "Response code = " + hc.getResponseCode());
                 }
 
                 input.close();
+                output.close();
             } catch (Exception e) {
                 Log.e("Net", "Error", e);
             }
