@@ -64,14 +64,17 @@ public class MainActivity extends AppCompatActivity {
 
         public void run() {
             try {
-                //Q2
-                //For HTTP GET
-                URL url = new URL("https://api.agify.io?name=" + name);
+                //Q3 Access to Supabase using HTTP GET
+                URL url = new URL("https://fhehrdzrnflooriioogj.supabase.co/rest/v1/Students"
+                + "?name=eq." + name);
 
                 Log.i("Net", url.toString());
 
                 HttpURLConnection hc =
                         (HttpURLConnection) url.openConnection();
+
+                hc.setRequestProperty("apikey", getString(R.string.SUPABASE_KEY));
+                hc.setRequestProperty("Authorization", "Bearer " + getString(R.string.SUPABASE_KEY));
 
                 InputStream input = hc.getInputStream();
 
