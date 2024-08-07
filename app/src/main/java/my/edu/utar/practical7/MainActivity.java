@@ -2,9 +2,14 @@ package my.edu.utar.practical7;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -22,67 +27,72 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Q1
-        Handler handler = new Handler();
-        ScrollView sv = new ScrollView(this);
-        TextView tv = new TextView(this);
-        sv.addView(tv);
-        setContentView(sv);
+        final Handler mHandler = new Handler();
 
-        new Thread() {
-            public void run() {
+        TextView tv1 = new TextView(this);
+        tv1.setText("Name:");
+        final EditText et1 = new EditText(this);
+        Button bt = new Button(this);
+        bt.setText("Submit");
 
-//                try {
-//                    URL url = new URL("https://tools.ietf.org/html/rfc2616");
-//                    HttpURLConnection hc = (HttpURLConnection) url.openConnection();
-//                    final String result;
-//
-//                    int length = hc.getContentLength();
-//
-//                    InputStream input = url.openStream();
-//                    //Fixed buffer size of 1KBytes
-//                    byte[] bInput = new byte[1000];
-//                    int readSize = input.read(bInput);
-//                    result = new String(bInput);
-//
-//                    handler.post(new Runnable() {
-//
-//                        @Override
-//                        public void run() {
-//                            tv.setText(result);
-//                        }
-//                    });
-//                    //tv.setText(result);
-//
-//                    input.close();
-//                } catch (IOException e) {
-//                    Log.e("Net", "Error", e);
-//                }
+        LinearLayout ll = new LinearLayout(this);
+        ll.setOrientation(LinearLayout.VERTICAL);
 
-                //Optional
-                //Use BufferedInputStream to more efficiently read content
-                //over the network. getContentLength() does not always return
-                //actual content length of a page. It is however okay to use
-                //when accessing web services.
-                try {
-                    URL url = new URL("https://tools.ietf.org/rfc/rfc2616.txt");
-                    HttpURLConnection hc = (HttpURLConnection) url.openConnection();
-                    final String result;
-                    InputStream in = new BufferedInputStream(hc.getInputStream());
-                    result = readStream(in);
+        ll.addView(tv1);
+        ll.addView(et1);
+        ll.addView(bt);
+        setContentView(ll);
 
-                    handler.post(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            tv.setText(result);
-                        }
-                    });
-                } catch (Exception e) {
-                    Log.e("Net", "Error", e);
-                }
+        bt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                MyThread connectThread = new MyThread(
+                        et1.getText().toString(), mHandler);
+                connectThread.start();
             }
-        }.start();
+        });
+    }
+
+    private class MyThread extends Thread {
+        private String name;
+        private Handler mHandler;
+
+        public MyThread(String name, Handler handler) {
+            this.name = name;
+            mHandler = handler;
+        }
+
+        public void run() {
+            try {
+                //Q2
+                //For HTTP GET
+                URL url = new URL("https://api.agify.io?name=" + name);
+
+                Log.i("Net", url.toString());
+
+                HttpURLConnection hc =
+                        (HttpURLConnection) url.openConnection();
+
+                InputStream input = hc.getInputStream();
+
+                String result = readStream(input);
+
+                if (hc.getResponseCode() == 200) {
+                    //OK
+                    Intent i = new Intent(MainActivity.this,
+                            SuccessActivity.class);
+                    i.putExtra("output", result);
+                    Log.i("MainActivity", "output = " + result);
+                    startActivity(i);
+                } else {
+                    Log.i("MainActivity", "Response code = " + hc.getResponseCode());
+                }
+
+                input.close();
+            } catch (Exception e) {
+                Log.e("Net", "Error", e);
+            }
+        }
     }
 
     //Optional
