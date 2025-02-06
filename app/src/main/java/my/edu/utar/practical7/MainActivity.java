@@ -19,6 +19,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -70,8 +77,13 @@ public class MainActivity extends AppCompatActivity {
 
                 Log.i("Net", url.toString());
 
-                HttpURLConnection hc =
-                        (HttpURLConnection) url.openConnection();
+                //Initialise and setup a all-trusting SSL context
+                SSLContext sc = SSLContext.getInstance("TLS");
+                setupATSSLContext(sc);
+
+                HttpsURLConnection hc =
+                        (HttpsURLConnection) url.openConnection();
+                hc.setSSLSocketFactory(sc.getSocketFactory());
 
                 InputStream input = hc.getInputStream();
 
@@ -109,4 +121,35 @@ public class MainActivity extends AppCompatActivity {
             return "";
         }
     }
+
+    private static void setupATSSLContext(SSLContext sc) {
+        try {
+            // Create a trust manager that does not validate certificate chains
+            TrustManager[] trustAllCerts = new TrustManager[]{
+                    new X509TrustManager() {
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+                            // No-op: accept all client certificates
+                        }
+
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+                            // No-op: accept all server certificates
+                        }
+
+                        @Override
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return new X509Certificate[0]; // No accepted issuers
+                        }
+                    }
+            };
+
+            // Install the all-trusting trust manager
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
